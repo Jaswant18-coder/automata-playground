@@ -113,7 +113,7 @@ async function generateFromGroq(prompt: string, apiKey: string) {
       'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'mixtral-8x7b-32768',
+      model: 'groq/compound',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Generate an automaton for: ${prompt}` },

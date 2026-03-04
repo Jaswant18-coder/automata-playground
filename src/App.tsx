@@ -826,65 +826,23 @@ function PromptPanel({
   onGenerate: (useLLM: boolean, config: LLMConfig) => Promise<void>;
   onLoadAutomaton: (machine: Automaton) => void;
 }) {
-  const [llmProvider, setLLMProvider] = useState<LLMProvider>('groq');
+  const [useLLM, setUseLLM] = useState(true); // Always use LLM by default
+  const [loading, setLoading] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [useLLM, setUseLLM] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const machine = promptResult?.machine;
   const isPDA = machine?.kind === 'pda';
   const pdaRows = isPDA ? pdaToTable(machine as PushdownAutomaton) : [];
 
-  const llmProviders: { id: LLMProvider; name: string; free: boolean; url: string; desc: string }[] = [
-    {
-      id: 'groq',
-      name: 'Groq',
-      free: true,
-      url: 'https://console.groq.com',
-      desc: '⚡ Super fast, completely free API',
-    },
-    {
-      id: 'gemini',
-      name: 'Google Gemini',
-      free: true,
-      url: 'https://makersuite.google.com/app/apikey',
-      desc: '🔌 Free API with generous tier',
-    },
-    {
-      id: 'ollama',
-      name: 'Ollama (Local)',
-      free: true,
-      url: 'https://ollama.ai',
-      desc: '🖥️ Runs locally (requires installation)',
-    },
-    {
-      id: 'huggingface',
-      name: 'HuggingFace',
-      free: true,
-      url: 'https://huggingface.co/settings/tokens',
-      desc: '🤗 Free inference API',
-    },
-    {
-      id: 'openai',
-      name: 'OpenAI',
-      free: false,
-      url: 'https://platform.openai.com/api-keys',
-      desc: '💰 Paid, but most reliable ($0.01 per use)',
-    },
-  ];
-
-  const currentProvider = llmProviders.find(p => p.id === llmProvider);
-
   const handleGenerate = async () => {
     setLoading(true);
     try {
       const config: LLMConfig = {
-        provider: llmProvider,
-        apiKey: llmProvider === 'ollama' ? undefined : apiKey,
-        baseUrl: llmProvider === 'ollama' ? 'http://localhost:11434' : undefined,
+        provider: 'groq',
+        apiKey: apiKey,
       };
-      await onGenerate(useLLM, config);
+      await onGenerate(true, config);
     } finally {
       setLoading(false);
     }
@@ -892,130 +850,61 @@ function PromptPanel({
 
   return (
     <div style={{ ...baseStyles.card, background: 'linear-gradient(135deg, #8b5cf6 10%, #6d28d9 50%, #7c3aed 100%)' }}>
-      <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '18px', color: '#ffffff' }}>✨ AI Prompt Generator</div>
-      
-      {/* Mode toggle */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ color: '#e9d5ff', fontSize: '13px', fontWeight: 500 }}>Mode:</span>
-        {(['hardcoded', 'llm'] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setUseLLM(mode === 'llm')}
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: 'none',
-              background: (mode === 'llm' ? useLLM : !useLLM) ? '#ffffff' : 'rgba(255,255,255,0.2)',
-              color: (mode === 'llm' ? useLLM : !useLLM) ? '#7c3aed' : '#e9d5ff',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '12px',
-              transition: 'all 0.3s ease',
-            }}
-          >
-            {mode === 'hardcoded' ? '⚙️ Hardcoded' : '🤖 AI (LLM)'}
-          </button>
-        ))}
+      <div style={{ fontWeight: 600, marginBottom: 12, fontSize: '18px', color: '#ffffff' }}>
+        ✨ AI Prompt Generator <span style={{ fontSize: '13px', fontWeight: 400, color: '#d8b4fe' }}>Powered by Groq ⚡</span>
       </div>
 
-      {/* LLM Provider Selection */}
-      {useLLM && (
-        <div style={{ 
-          background: 'rgba(255,255,255,0.1)',
-          padding: '12px',
-          borderRadius: 10,
-          marginBottom: 12,
-          backdropFilter: 'blur(10px)',
-        }}>
-          <label style={{ display: 'block', color: '#e9d5ff', fontWeight: 500, marginBottom: 8, fontSize: '13px' }}>
-            Select LLM Provider:
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 10 }}>
-            {llmProviders.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setLLMProvider(p.id)}
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 8,
-                  border: '2px solid ' + (llmProvider === p.id ? '#fbbf24' : 'rgba(255,255,255,0.2)'),
-                  background: llmProvider === p.id ? 'rgba(255,193,7,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: llmProvider === p.id ? '#fbbf24' : '#e9d5ff',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'center',
-                }}
-                title={p.desc}
-              >
-                {p.name} {p.free && '🆓'}
-              </button>
-            ))}
+      {/* API Key Input */}
+      <div style={{ 
+        background: 'rgba(255,255,255,0.1)',
+        padding: '12px',
+        borderRadius: 10,
+        marginBottom: 12,
+        backdropFilter: 'blur(10px)',
+      }}>
+        <label style={{ display: 'flex', flexDirection: 'column', color: '#e9d5ff', fontWeight: 500, marginBottom: 8 }}>
+          Groq API Key <span style={{ fontSize: '11px', fontWeight: 400, color: '#d8b4fe' }}>
+            (Get yours at <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer" style={{ color: '#fbbf24', textDecoration: 'underline' }}>console.groq.com</a>)
+          </span>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+            <input
+              type={showApiKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="gsk_..."
+              style={{
+                flex: 1,
+                padding: '10px 12px',
+                borderRadius: 8,
+                border: '2px solid rgba(255,255,255,0.3)',
+                background: 'rgba(255,255,255,0.95)',
+                color: '#374151',
+                fontSize: '13px',
+                fontFamily: 'monospace',
+              }}
+            />
+            <button
+              onClick={() => setShowApiKey(!showApiKey)}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 8,
+                border: 'none',
+                background: 'rgba(255,255,255,0.2)',
+                color: '#e9d5ff',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              {showApiKey ? '👁️' : '🔒'}
+            </button>
           </div>
-
-          {/* Provider Info */}
-          {currentProvider && (
-            <div style={{ fontSize: '12px', color: '#d8b4fe', marginBottom: 10, padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: 6 }}>
-              <strong>{currentProvider.name}:</strong> {currentProvider.desc}
-              <br />
-              <a href={currentProvider.url} target="_blank" rel="noopener noreferrer" style={{ color: '#fbbf24', textDecoration: 'underline', fontSize: '11px' }}>
-                Get API Key →
-              </a>
-            </div>
-          )}
-
-          {/* API Key Input */}
-          {llmProvider !== 'ollama' && (
-            <label style={{ display: 'flex', flexDirection: 'column', color: '#e9d5ff', fontWeight: 500, marginBottom: 8 }}>
-              API Key
-              <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={llmProvider === 'openai' ? 'sk-...' : 'your-api-key'}
-                  style={{
-                    flex: 1,
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    background: 'rgba(255,255,255,0.9)',
-                    color: '#374151',
-                    fontSize: '13px',
-                    fontFamily: 'monospace',
-                  }}
-                />
-                <button
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: 6,
-                    border: 'none',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: '#e9d5ff',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                  }}
-                >
-                  {showApiKey ? '👁️' : '🔒'}
-                </button>
-              </div>
-            </label>
-          )}
-
-          {llmProvider === 'ollama' && (
-            <div style={{ fontSize: '12px', color: '#fbbf24', padding: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: 6 }}>
-              ℹ️ Make sure Ollama is running (`ollama serve`) before generating. No API key needed!
-            </div>
-          )}
-        </div>
-      )}
+        </label>
+      </div>
 
       <textarea
         style={{ 
           width: '100%', 
-          minHeight: 100,
+          minHeight: 120,
           padding: '12px',
           borderRadius: 10,
           border: '2px solid #c4b5fd',
@@ -1030,52 +919,64 @@ function PromptPanel({
         onFocus={(e) => (e.currentTarget.style.borderColor = '#a78bfa')}
         onBlur={(e) => (e.currentTarget.style.borderColor = '#c4b5fd')}
         disabled={loading}
-        placeholder="Describe your automaton:
+        placeholder="Describe your automaton in natural language:
+Examples:
 • 'student assessment platform'
 • 'drone flight instructions'
 • 'car navigation system'
-• Or any natural language description!"
+• 'text filtering system'
+• 'binary monitoring mod 4'
+• Any custom DFA/NFA description!"
       />
-      <div style={{ marginTop: 10, padding: '10px 12px', background: '#f3e8ff', borderRadius: 8, fontSize: '13px', color: '#5b21b6', marginBottom: 12 }}>
-        💡 {useLLM ? `🤖 Using ${currentProvider?.name} for intelligent parsing` : '⚙️ Using pattern matching (no API key needed)'}
+      
+      <div style={{ marginTop: 10, padding: '12px', background: '#f3e8ff', borderRadius: 8, fontSize: '13px', color: '#5b21b6', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: '16px' }}>🚀</span>
+        <span><strong>Powered by Groq:</strong> Fast, intelligent AI parsing of automata descriptions</span>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
         <button 
           onClick={handleGenerate}
-          disabled={loading || (useLLM && llmProvider !== 'ollama' && !apiKey?.trim())}
+          disabled={loading || !apiKey.trim()}
           style={{
-            padding: '12px 20px',
+            padding: '14px 28px',
             borderRadius: 10,
             border: 'none',
-            background: loading ? '#d8b4fe' : '#ffffff',
+            background: (loading || !apiKey.trim()) ? '#d8b4fe' : '#ffffff',
             color: '#7c3aed',
             fontWeight: 600,
-            cursor: loading || (useLLM && llmProvider !== 'ollama' && !apiKey?.trim()) ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+            cursor: (loading || !apiKey.trim()) ? 'not-allowed' : 'pointer',
             transition: 'all 0.3s ease',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            opacity: loading || (useLLM && llmProvider !== 'ollama' && !apiKey?.trim()) ? 0.6 : 1,
+            boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
+            opacity: (loading || !apiKey.trim()) ? 0.7 : 1,
           }}
           onMouseEnter={(e) => {
-            if (!loading && !(useLLM && llmProvider !== 'ollama' && !apiKey?.trim())) {
+            if (!loading && apiKey.trim()) {
               ((e.currentTarget as any).style.transform = 'translateY(-2px)');
+              ((e.currentTarget as any).style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.3)');
             }
           }}
-          onMouseLeave={(e) => ((e.currentTarget as any).style.transform = 'translateY(0)')}
+          onMouseLeave={(e) => {
+            ((e.currentTarget as any).style.transform = 'translateY(0)');
+            ((e.currentTarget as any).style.boxShadow = '0 4px 15px rgba(0,0,0,0.15)');
+          }}
         >
-          {loading ? '⏳ Generating...' : '🚀 Generate'}
+          {loading ? '⏳ Generating...' : '🚀 Generate Automaton'}
         </button>
+        
         {machine && machine.kind !== 'pda' && (
           <button 
             onClick={() => onLoadAutomaton(machine)}
             disabled={loading}
             style={{
-              padding: '12px 20px',
+              padding: '14px 28px',
               borderRadius: 10,
               border: 'none',
               background: '#fbbf24',
               color: '#78350f',
               fontWeight: 600,
+              fontSize: '16px',
               cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s ease',
               opacity: loading ? 0.6 : 1,
